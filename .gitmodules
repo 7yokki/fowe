@@ -1,3 +1,6 @@
 [submodule "third_party/The-Forge"]
 	path = third_party/The-Forge
 	url = https://github.com/ConfettiFX/The-Forge.git
+[submodule "third_party/bullet3"]
+	path = third_party/bullet3
+	url = https://github.com/bulletphysics/bullet3
