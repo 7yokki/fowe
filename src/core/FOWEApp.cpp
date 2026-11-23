@@ -18,6 +18,8 @@
 #include "Graphics/FSL/defaults.h"
 #include "Utilities/RingBuffer.h"
 
+#include "../physics/IPhysicsWorld.h"
+
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -144,6 +146,32 @@ public:
         mQualityTier = readQualityTier();
         mAppliedQualityTier = mQualityTier;
 
+        mPhysics = fowe::CreateBulletPhysicsWorld();
+        if (mPhysics && mPhysics->Init())
+        {
+            mPhysics->SetGravity({ 0.0f, -9.81f, 0.0f });
+
+            fowe::RigidBodyDesc groundDesc = {};
+            groundDesc.position = { 0.0f, -0.5f, 0.0f };
+            groundDesc.halfExtents = { 10.0f, 0.5f, 10.0f };
+            groundDesc.mass = 0.0f;
+            mGroundBody = mPhysics->CreateBox(groundDesc);
+
+            fowe::RigidBodyDesc boxDesc = {};
+            boxDesc.position = { 0.0f, 6.0f, 0.0f };
+            boxDesc.halfExtents = { 0.5f, 0.5f, 0.5f };
+            boxDesc.mass = 1.0f;
+            mDynamicBody = mPhysics->CreateBox(boxDesc);
+
+            mPhysicsStatus = bdynfromcstr("Physics: Bullet world ready");
+            LOGF(LogLevel::eINFO, "Bullet physics world initialized (%u bodies)", 2u);
+        }
+        else
+        {
+            mPhysicsStatus = bdynfromcstr("Physics: unavailable");
+            LOGF(LogLevel::eWARNING, "Bullet physics world failed to initialize");
+        }
+
         LOGF(LogLevel::eINFO, "FOWE initialized on %s / %s", pRenderer->pGpu->mGpuVendorPreset.mGpuName, "Vulkan");
         return true;
     }
@@ -152,6 +180,18 @@ public:
     {
         exitUserInterface();
         exitFontSystem();
+
+        if (mPhysics)
+        {
+            mPhysics->Shutdown();
+            fowe::DestroyPhysicsWorld(mPhysics);
+            mPhysics = nullptr;
+        }
+        if (mPhysicsStatus.data)
+        {
+            bdestroy(&mPhysicsStatus);
+            mPhysicsStatus = {};
+        }
 
         exitGpuCmdRing(pRenderer, &gGraphicsCmdRing);
         exitSemaphore(pRenderer, pImageAcquiredSemaphore);
@@ -231,6 +271,31 @@ public:
             mAppliedQualityTier = mQualityTier;
             writeQualityTier(mQualityTier);
             LOGF(LogLevel::eINFO, "Graphics quality preset changed to %s", qualityTierName(mAppliedQualityTier));
+        }
+
+        if (mPhysics)
+        {
+            mPhysics->Step(deltaTime);
+            mPhysicsElapsed += deltaTime;
+
+            if (mDynamicBody && mPhysicsStatus.data)
+            {
+                fowe::Vec3 position = {};
+                fowe::Quat rotation = {};
+                if (mPhysics->GetBodyTransform(mDynamicBody, position, rotation))
+                {
+                    if ((mPhysicsUpdateCounter % 15) == 0)
+                        bformat(&mPhysicsStatus, "Physics: box.y = %.2f m  (Bullet)", position.y);
+
+                    if (!mPhysicsSettledLogged && mPhysicsElapsed >= 2.0f)
+                    {
+                        mPhysicsSettledLogged = true;
+                        LOGF(LogLevel::eINFO, "Bullet physics: dynamic box at y=%.3f after %.1fs", position.y, mPhysicsElapsed);
+                    }
+
+                    ++mPhysicsUpdateCounter;
+                }
+            }
         }
     }
 
@@ -330,7 +395,7 @@ private:
     {
         UIComponentDesc desc = {};
         desc.mStartPosition = vec2(20.0f, 60.0f);
-        desc.mStartSize = vec2(460.0f, 420.0f);
+        desc.mStartSize = vec2(520.0f, 500.0f);
         desc.mFontID = gFontID;
         desc.mFontSize = 18.0f;
         uiAddComponent("FOWE Editor", &desc, &pGuiWindow);
@@ -357,6 +422,14 @@ private:
 
         static LabelWidget hintLabel;
         uiAddComponentWidget(pGuiWindow, "Renderer: The-Forge / Vulkan   Physics: Bullet   Audio: miniaudio", &hintLabel, WIDGET_TYPE_LABEL);
+
+        static SeparatorWidget sep3;
+        uiAddComponentWidget(pGuiWindow, "", &sep3, WIDGET_TYPE_SEPARATOR);
+
+        mPhysicsColor = float4(0.65f, 0.85f, 1.0f, 1.0f);
+        mPhysicsText.pText = &mPhysicsStatus;
+        mPhysicsText.pColor = &mPhysicsColor;
+        uiAddComponentWidget(pGuiWindow, "", &mPhysicsText, WIDGET_TYPE_DYNAMIC_TEXT);
     }
 
     Renderer*      pRenderer = nullptr;
@@ -371,6 +444,16 @@ private:
     int32_t          mQualityTier = (int32_t)QualityTier::High;
     int32_t          mAppliedQualityTier = (int32_t)QualityTier::High;
     RadioButtonWidget mRadios[4] = {};
+
+    fowe::IPhysicsWorld* mPhysics = nullptr;
+    uint64_t                       mGroundBody = 0;
+    uint64_t                       mDynamicBody = 0;
+    uint32_t                       mPhysicsUpdateCounter = 0;
+    float                          mPhysicsElapsed = 0.0f;
+    bool                           mPhysicsSettledLogged = false;
+    bstring                        mPhysicsStatus = {};
+    DynamicTextWidget              mPhysicsText = {};
+    float4                         mPhysicsColor = float4(0.65f, 0.85f, 1.0f, 1.0f);
 };
 
 DEFINE_APPLICATION_MAIN(FOWEApp)

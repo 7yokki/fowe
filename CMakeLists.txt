@@ -214,13 +214,29 @@ add_custom_target(fowe_assets ALL
     VERBATIM
 )
 
+
+# ---------------------------------------------------------------------------
+# Physics: Bullet (first IPhysicsWorld backend)
+# ---------------------------------------------------------------------------
+set(BUILD_PYBULLET OFF CACHE BOOL "" FORCE)
+set(BUILD_PYBULLET_NUMPY OFF CACHE BOOL "" FORCE)
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_CPU_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(USE_GRAPHICAL_BENCHMARK OFF CACHE BOOL "" FORCE)
+set(INSTALL_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/bullet3 EXCLUDE_FROM_ALL)
+
 # ---------------------------------------------------------------------------
 # FOWE executable
 # ---------------------------------------------------------------------------
 add_executable(FOWE
     src/core/FOWEApp.cpp
+    src/physics/BulletPhysicsWorld.cpp
 )
-target_link_libraries(FOWE PRIVATE ForgeRenderer ForgeOS)
+target_link_libraries(FOWE PRIVATE ForgeRenderer ForgeOS BulletDynamics BulletCollision LinearMath)
+target_include_directories(FOWE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bullet3/src)
 # VULKAN defined by The-Forge headers
 set_target_properties(FOWE PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${RUN_DIR})
 add_dependencies(FOWE fowe_shaders)
