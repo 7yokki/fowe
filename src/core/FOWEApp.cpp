@@ -20,6 +20,7 @@
 
 #include "../physics/IPhysicsWorld.h"
 #include "../audio/AudioSystem.h"
+#include "../script/ScriptEngine.h"
 
 #include <cstdio>
 #include <cstring>
@@ -45,6 +46,11 @@ static const char* qualityTierName(int32_t tier)
         case 3: return "Ultra";
         default: return "High";
     }
+}
+
+static void scriptLogCallback(const char* message, bool isError)
+{
+    LOGF(isError ? LogLevel::eERROR : LogLevel::eINFO, "[Lua] %s", message);
 }
 
 static int32_t parseQualityTier(const char* value)
@@ -178,6 +184,26 @@ public:
         else
             LOGF(LogLevel::eWARNING, "miniaudio failed to initialize; continuing without audio");
 
+        mScript = fowe::ScriptEngine::Create();
+        if (mScript && mScript->Init())
+        {
+            mScript->SetLogCallback(scriptLogCallback);
+            if (!mScript->RunFile("Scripts/editor.lua"))
+                LOGF(LogLevel::eWARNING, "Failed to run Scripts/editor.lua");
+
+            LOGF(LogLevel::eINFO, "Lua scripting initialized (%d event handlers)", mScript->HandlerCount());
+            mScript->Emit("editor_ready", "");
+        }
+        else
+        {
+            LOGF(LogLevel::eWARNING, "Lua scripting failed to initialize");
+            if (mScript)
+            {
+                fowe::ScriptEngine::Destroy(mScript);
+                mScript = nullptr;
+            }
+        }
+
         LOGF(LogLevel::eINFO, "FOWE initialized on %s / %s", pRenderer->pGpu->mGpuVendorPreset.mGpuName, "Vulkan");
         return true;
     }
@@ -274,11 +300,16 @@ public:
     {
         UNREF_PARAM(deltaTime);
 
+        if (mScript)
+            mScript->Dispatch();
+
         if (mQualityTier != mAppliedQualityTier)
         {
             mAppliedQualityTier = mQualityTier;
             writeQualityTier(mQualityTier);
             LOGF(LogLevel::eINFO, "Graphics quality preset changed to %s", qualityTierName(mAppliedQualityTier));
+            if (mScript)
+                mScript->Emit("quality_changed", qualityTierName(mAppliedQualityTier));
         }
 
         if (mPhysics)
@@ -299,6 +330,12 @@ public:
                     {
                         mPhysicsSettledLogged = true;
                         LOGF(LogLevel::eINFO, "Bullet physics: dynamic box at y=%.3f after %.1fs", position.y, mPhysicsElapsed);
+                        if (mScript)
+                        {
+                            char payload[32] = {};
+                            std::snprintf(payload, sizeof(payload), "%.2f", position.y);
+                            mScript->Emit("physics_settled", payload);
+                        }
                     }
 
                     ++mPhysicsUpdateCounter;
@@ -440,6 +477,11 @@ private:
         static LabelWidget audioLabelWidget;
         uiAddComponentWidget(pGuiWindow, audioLabel, &audioLabelWidget, WIDGET_TYPE_LABEL);
 
+        char scriptLabel[128] = {};
+        std::snprintf(scriptLabel, sizeof(scriptLabel), "Scripting: Lua 5.3.5 + sol2 (%d handlers)", mScript ? mScript->HandlerCount() : 0);
+        static LabelWidget scriptLabelWidget;
+        uiAddComponentWidget(pGuiWindow, scriptLabel, &scriptLabelWidget, WIDGET_TYPE_LABEL);
+
         mPhysicsColor = float4(0.65f, 0.85f, 1.0f, 1.0f);
         mPhysicsText.pText = &mPhysicsStatus;
         mPhysicsText.pColor = &mPhysicsColor;
@@ -468,6 +510,8 @@ private:
     bstring                        mPhysicsStatus = {};
     DynamicTextWidget              mPhysicsText = {};
     float4                         mPhysicsColor = float4(0.65f, 0.85f, 1.0f, 1.0f);
+
+    fowe::ScriptEngine* mScript = nullptr;
 };
 
 DEFINE_APPLICATION_MAIN(FOWEApp)

@@ -208,6 +208,7 @@ add_custom_target(fowe_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets/gpu.cfg ${RUN_DIR}/gpu.cfg
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets/gpu.data ${RUN_DIR}/gpu.data
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets/Fonts/TitilliumText/TitilliumText-Bold.otf ${RUN_DIR}/Fonts/TitilliumText/TitilliumText-Bold.otf
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets/Scripts/editor.lua ${RUN_DIR}/Scripts/editor.lua
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FORGE_COMMON}/Graphics/ThirdParty/OpenSource/VulkanSDK/bin/Linux/libVkLayer_khronos_validation.so ${RUN_DIR}/libVkLayer_khronos_validation.so
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FORGE_COMMON}/Graphics/ThirdParty/OpenSource/VulkanSDK/bin/Linux/VkLayer_khronos_validation.json ${RUN_DIR}/VkLayer_khronos_validation.json
     COMMENT "Staging FOWE runtime assets"
@@ -242,9 +243,14 @@ add_executable(FOWE
     src/core/FOWEApp.cpp
     src/physics/BulletPhysicsWorld.cpp
     src/audio/AudioSystem.cpp
+    src/script/ScriptEngine.cpp
 )
 target_link_libraries(FOWE PRIVATE ForgeRenderer ForgeOS BulletDynamics BulletCollision LinearMath miniaudio)
-target_include_directories(FOWE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bullet3/src)
+target_include_directories(FOWE PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bullet3/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sol2/include
+    ${FORGE_COMMON}/Game/ThirdParty/OpenSource/lua-5.3.5/src
+)
 # VULKAN defined by The-Forge headers
 set_target_properties(FOWE PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${RUN_DIR})
 add_dependencies(FOWE fowe_shaders)
