@@ -37,7 +37,13 @@ link "$ANIM_DIR" bone.frag.fsl Bone.frag.fsl
 link "$ANIM_DIR" bone.vert.fsl Bone.vert.fsl
 
 GLSLANG="$FORGE_ROOT/Common_3/Graphics/ThirdParty/OpenSource/VulkanSDK/bin/Linux/glslangValidator"
-[ -f "$GLSLANG" ] && chmod +x "$GLSLANG" || true
+GLSLANG_MODE=""
+if [ -f "$GLSLANG" ]; then
+    GLSLANG_MODE="$(stat -c %a "$GLSLANG")"
+    chmod +x "$GLSLANG"
+    restore_glslang() { [ -n "$GLSLANG_MODE" ] && chmod "$GLSLANG_MODE" "$GLSLANG" 2>/dev/null || true; }
+    trap restore_glslang EXIT
+fi
 
 mkdir -p "$RUN_DIR/Shaders" "$RUN_DIR/CompiledShaders"
 
