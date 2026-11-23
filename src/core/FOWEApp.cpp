@@ -19,6 +19,7 @@
 #include "Utilities/RingBuffer.h"
 
 #include "../physics/IPhysicsWorld.h"
+#include "../audio/AudioSystem.h"
 
 #include <cstdio>
 #include <cstring>
@@ -172,6 +173,11 @@ public:
             LOGF(LogLevel::eWARNING, "Bullet physics world failed to initialize");
         }
 
+        if (fowe::AudioInit())
+            LOGF(LogLevel::eINFO, "miniaudio initialized: backend %s @ %u Hz", fowe::AudioBackendName(), fowe::AudioSampleRate());
+        else
+            LOGF(LogLevel::eWARNING, "miniaudio failed to initialize; continuing without audio");
+
         LOGF(LogLevel::eINFO, "FOWE initialized on %s / %s", pRenderer->pGpu->mGpuVendorPreset.mGpuName, "Vulkan");
         return true;
     }
@@ -192,6 +198,8 @@ public:
             bdestroy(&mPhysicsStatus);
             mPhysicsStatus = {};
         }
+
+        fowe::AudioShutdown();
 
         exitGpuCmdRing(pRenderer, &gGraphicsCmdRing);
         exitSemaphore(pRenderer, pImageAcquiredSemaphore);
@@ -425,6 +433,12 @@ private:
 
         static SeparatorWidget sep3;
         uiAddComponentWidget(pGuiWindow, "", &sep3, WIDGET_TYPE_SEPARATOR);
+
+        char audioLabel[128] = {};
+        std::snprintf(audioLabel, sizeof(audioLabel), "Audio: miniaudio (%s @ %u Hz)",
+                      fowe::AudioBackendName(), fowe::AudioSampleRate());
+        static LabelWidget audioLabelWidget;
+        uiAddComponentWidget(pGuiWindow, audioLabel, &audioLabelWidget, WIDGET_TYPE_LABEL);
 
         mPhysicsColor = float4(0.65f, 0.85f, 1.0f, 1.0f);
         mPhysicsText.pText = &mPhysicsStatus;

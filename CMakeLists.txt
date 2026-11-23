@@ -229,13 +229,21 @@ set(INSTALL_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/bullet3 EXCLUDE_FROM_ALL)
 
 # ---------------------------------------------------------------------------
+# Audio: miniaudio (single-header, compiled as C)
+# ---------------------------------------------------------------------------
+add_library(miniaudio STATIC third_party/miniaudio/miniaudio.c)
+target_include_directories(miniaudio PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio)
+target_link_libraries(miniaudio PUBLIC ${CMAKE_DL_LIBS} Threads::Threads m)
+
+# ---------------------------------------------------------------------------
 # FOWE executable
 # ---------------------------------------------------------------------------
 add_executable(FOWE
     src/core/FOWEApp.cpp
     src/physics/BulletPhysicsWorld.cpp
+    src/audio/AudioSystem.cpp
 )
-target_link_libraries(FOWE PRIVATE ForgeRenderer ForgeOS BulletDynamics BulletCollision LinearMath)
+target_link_libraries(FOWE PRIVATE ForgeRenderer ForgeOS BulletDynamics BulletCollision LinearMath miniaudio)
 target_include_directories(FOWE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bullet3/src)
 # VULKAN defined by The-Forge headers
 set_target_properties(FOWE PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${RUN_DIR})
