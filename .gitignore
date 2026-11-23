@@ -1,0 +1,11 @@
+# Build output
+build/
+
+# Runtime / editor artifacts
+*.log
+fowe.cfg
+*.spv
+
+# Editor/OS cruft
+.DS_Store
+*.swp

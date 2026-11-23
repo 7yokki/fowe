@@ -1,0 +1,16 @@
+# FOWE runtime path statement
+# Format: exactly one space around '='. Paths must end with a trailing slash.
+RD_SHADER_BINARIES = CompiledShaders/
+RD_PIPELINE_CACHE = PipelineCaches/
+RD_TEXTURES = Textures/
+RD_MESHES = Meshes/
+RD_FONTS = Fonts/
+RD_ANIMATIONS = Animations/
+RD_AUDIO = Audio/
+RD_GPU_CONFIG = ./
+RD_COMPILED_MATERIALS = CompiledMaterials/
+RD_SCRIPTS = Scripts/
+RD_SCREENSHOTS = Screenshots/
+RD_LOG = ./
+RD_DEBUG = ./
+RD_OTHER_FILES = ./
